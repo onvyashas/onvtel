@@ -1,18 +1,37 @@
 package stepDefinitions;
 
-import au.com.telstra.simcardactivator.SimCardActivator;
-import io.cucumber.spring.CucumberContextConfiguration;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootContextLoader;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.test.context.ContextConfiguration;
+import io.cucumber.java.en.*;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
-@CucumberContextConfiguration
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-@ContextConfiguration(classes = SimCardActivator.class, loader = SpringBootContextLoader.class)
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Map;
+
 public class SimCardActivatorStepDefinitions {
-    @Autowired
-    private TestRestTemplate restTemplate;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+    private ResponseEntity<Map> response;
+
+    @Given("I activate a SIM card with ICCID {string} and customer email {string}")
+    public void activateSimCard(String iccid, String email) {
+        String url = "http://localhost:8080/simcards/activate?iccid=" + iccid + "&customerEmail=" + email;
+        response = restTemplate.postForEntity(url, null, Map.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @When("I query the SIM card record with ID {int}")
+    public void querySimCardRecord(Integer id) {
+        String url = "http://localhost:8080/simcards?simCardId=" + id;
+        response = restTemplate.getForEntity(url, Map.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Then("the activation status should be {word}")
+    public void verifyActivationStatus(String expectedStatus) {
+        boolean actual = (boolean) response.getBody().get("active");
+        boolean expected = Boolean.parseBoolean(expectedStatus);
+        assertEquals(expected, actual);
+    }
 }
